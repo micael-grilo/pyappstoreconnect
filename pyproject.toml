@@ -1,3 +1,4 @@
 [project]
 name = "pyappstoreconnect"
 version = "0.0.0"
+readme = "README.md"
