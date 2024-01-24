@@ -2,3 +2,15 @@
 name = "pyappstoreconnect"
 version = "0.0.0"
 readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Grigory Efimov", email = "grigory.efimov@gmail.com"},
+]
+maintainers = [
+    {name = "Grigory Efimov", email = "grigory.efimov@gmail.com"},
+]
+
+[project.urls]
+Homepage = "https://github.com/fb929/pyappstoreconnect"
+Documentation = "https://github.com/fb929/pyappstoreconnect"
+Repository = "https://github.com/fb929/pyappstoreconnect"
