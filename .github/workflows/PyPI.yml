@@ -38,6 +38,13 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          fail_on_unmatched_files: true
+          files: 'dist/*'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
