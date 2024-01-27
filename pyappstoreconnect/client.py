@@ -9,11 +9,6 @@ import datetime
 import hashlib
 import pickle
 
-cfg = {
-    "cacheDirPath": "./cache",
-    "requestsRetry": True,
-}
-
 class Client():
     """
     client for connect to appstoreconnect.apple.com
@@ -28,9 +23,20 @@ for response in responses:
 ```
     """
 
-    def __init__(self, cfg=cfg):
+    def __init__(self, cacheDirPath="./cache", requestsRetry=True, logLevel=None):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.cfg = cfg
+        if logLevel:
+            if re.match(r"^(warn|warning)$", logLevel, re.IGNORECASE):
+                self.logger.setLevel(logging.WARNING)
+            elif re.match(r"^debug$", logLevel, re.IGNORECASE):
+                self.logger.setLevel(logging.DEBUG)
+            else:
+                self.logger.setLevel(logging.INFO)
+        args = locals()
+        for argName, argValue in args.items():
+            if argName != 'self':
+                setattr(self, argName, argValue)
+
         self.xWidgetKey = self.getXWidgetKey()
         self.hashcash = self.getHashcash()
         self.headers = {
@@ -42,7 +48,7 @@ for response in responses:
         }
         self.session = requests.Session() # create a new session object
         # requests: define the retry strategy {{
-        if cfg['requestsRetry']:
+        if self.requestsRetry:
             retryStrategy = Retry(
                 total=4, # maximum number of retries
                 backoff_factor=10, # retry via 10, 20, 40, 80 sec
@@ -59,11 +65,11 @@ for response in responses:
         self.scnt = None
         # persistent session cookie {{
         try:
-            os.makedirs(self.cfg['cacheDirPath'])
+            os.makedirs(self.cacheDirPath)
         except OSError:
-            if not os.path.isdir(self.cfg['cacheDirPath']):
+            if not os.path.isdir(self.cacheDirPath):
                 raise
-        self.sessionCacheFile = self.cfg['cacheDirPath'] +'/sessionCacheFile.txt'
+        self.sessionCacheFile = self.cacheDirPath +'/sessionCacheFile.txt'
         if os.path.exists(self.sessionCacheFile) and os.path.getsize(self.sessionCacheFile) > 0:
             with open(self.sessionCacheFile, 'rb') as f:
                 cookies = pickle.load(f)
@@ -91,7 +97,7 @@ for response in responses:
         """
 
         defName = inspect.stack()[0][3]
-        cacheFile = self.cfg['cacheDirPath'] +'/WidgetKey.txt'
+        cacheFile = self.cacheDirPath+'/WidgetKey.txt'
         if os.path.exists(cacheFile) and os.path.getsize(cacheFile) > 0:
             with open(cacheFile, "r") as file:
                  xWidgetKey = file.read()
