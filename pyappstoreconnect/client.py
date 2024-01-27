@@ -303,12 +303,13 @@ for response in responses:
             # }}
 
             # Acquisition {{
-            'pageViewUnique': { # pages view by sources
-                "group": {
-                   "metric": "pageViewUnique",
-                   "dimension": "source",
-                   "rank": "DESCENDING",
-                   "limit": 10,
+            'pageViewUniqueSource': { # pages view by sources
+                'measures': 'pageViewUnique',
+                'group': {
+                   'metric': 'pageViewUnique',
+                   'dimension': 'source',
+                   'rank': 'DESCENDING',
+                   'limit': 10,
                 },
             },
             # }}
@@ -337,6 +338,7 @@ for response in responses:
         for metric,settings in metrics.items():
             args = defaultSettings.copy()
             args.update(settings)
-            args['measures'] = metric
+            if not 'measures' in args:
+                args['measures'] = metric
             response = self.timeSeriesAnalytics(**args)
             yield { 'settings': args, 'response': response }
