@@ -11,6 +11,7 @@ import pickle
 
 cfg = {
     "cacheDirPath": "./cache",
+    "requestsRetry": True,
 }
 
 class Client():
@@ -39,18 +40,18 @@ for response in responses:
             "X-Apple-Widget-Key": self.xWidgetKey,
             "X-Apple-HC": self.hashcash,
         }
+        self.session = requests.Session() # create a new session object
         # requests: define the retry strategy {{
-        retryStrategy = Retry(
-            total=4, # maximum number of retries
-            backoff_factor=10, # retry via 10, 20, 40, 80 sec
-            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-        )
-        # create an http adapter with the retry strategy and mount it to session
-        adapter = HTTPAdapter(max_retries=retryStrategy)
-        # Create a new session object
-        self.session = requests.Session()
-        self.session.mount('http://', adapter)
-        self.session.mount('https://', adapter)
+        if cfg['requestsRetry']:
+            retryStrategy = Retry(
+                total=4, # maximum number of retries
+                backoff_factor=10, # retry via 10, 20, 40, 80 sec
+                status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+            )
+            # create an http adapter with the retry strategy and mount it to session
+            adapter = HTTPAdapter(max_retries=retryStrategy)
+            self.session.mount('http://', adapter)
+            self.session.mount('https://', adapter)
         # }}
         self.session.headers.update(self.headers)
         self.authTypes = ["hsa2"] # supported auth types
@@ -234,7 +235,7 @@ for response in responses:
         endTime = currentTime.strftime("%Y-%m-%dT00:00:00Z")
         return { "startTime": startTime, "endTime": endTime }
 
-    def timeSeriesAnalytics(self, appIds, measures, startTime, endTime, frequency, viewBy):
+    def timeSeriesAnalytics(self, appIds, measures, startTime, endTime, frequency, group=None, dimensionFilters=list()):
         """
         https://github.com/fastlane/fastlane/blob/master/spaceship/lib/spaceship/tunes/tunes_client.rb#L633
         """
@@ -243,25 +244,16 @@ for response in responses:
         if not isinstance(measures, list):
             measures = [measures]
 
-        if not viewBy or not measures:
-            group = None
-        else:
-            group = {
-                "metric": measures[0],
-                "dimension": viewBy,
-                "rank": "DESCENDING",
-                "limit": 3
-            }
-
         payload = {
             "adamId": appIds,
-            "dimensionFilters": [],
+            "measures": measures,
+            "dimensionFilters": dimensionFilters,
+            "startTime": startTime,
             "endTime": endTime,
             "frequency": frequency,
-            "group": group,
-            "measures": measures,
-            "startTime": startTime,
         }
+        if group != None:
+            payload['group'] = group
         headers = {
             "X-Requested-By": "appstoreconnect.apple.com",
         }
@@ -281,20 +273,70 @@ for response in responses:
             startTime = timeInterval['startTime']
             endTime = timeInterval['endTime']
 
-        metrics = [
-            'impressionsTotal', # App Store / Impressions Unique Devices
-            'pageViewCount', # App Store / Product Page Views Unique Devices
-            'units', # Sales / App Units
-            'iap', # Sales / In-App Purchases
-            'sales', # Sales / Sales
-            'payingUsers', # Sales / Paying Users
-            'installs', # Usage / Installations
-            'sessions', # Usage / Sessions
-            'activeDevices', # Usage / Active Devices
-            'rollingActiveDevices', # Usage / Active Devices 30 Days
-            'crashes', # Usage / Crashes
-        ]
+        metrics = {
+            # app store {{
+            'impressionsTotal': {}, # The number of times the app's icon was viewed on the App Store on devices running iOS 8, tvOS 9, macOS 10.14.1, or later.
+            'impressionsTotalUnique': {}, # The number of unique devices running iOS 8, tvOS 9, macOS 10.14.1, or later, that viewed the app's icon on the App Store.
+            'conversionRate': {}, # Calculated by dividing total downloads and pre-orders by unique device impressions. When a user pre-orders an app, it counts towards your conversion rate. It is not counted again when it downloads to their device.
+            'pageViewCount': {}, # The number of times the app's product page was viewed on the App Store on devices running iOS 8, tvOS 9, macOS 10.14.1, or later.
+            'pageViewUnique': {}, # The number of unique devices running iOS 8, tvOS 9, macOS 10.14.1, or later, that viewed your app's product page on the App Store.
+            'updates': {}, # The number of times the app has been updated to its latest version.
+            # }}
+            # downloads {{
+            'units': {}, # The number of first-time downloads on devices with iOS, tvOS, or macOS.
+            'redownloads': {}, # The number of redownloads on a device running iOS, tvOS, or macOS. Redownloads do not include auto-downloads, restores, or updates.
+            'totalDownloads': {}, # The number of first-time downloads and redownloads on devices with iOS, tvOS, or macOS.
+            # }}
+            # sales {{
+            'iap': {}, # The number of in-app purchases on devices with iOS, tvOS, or macOS.
+            'proceeds': {}, # The estimated amount of proceeds the developer will receive from their sales, minus Apple’s commission. May not match final payout due to final exchange rates and transaction lifecycle.
+            'sales': {}, # The total amount billed to customers for purchasing apps, bundles, and in-app purchases.
+            'payingUsers': {}, # The number of unique users that paid for the app or an in-app purchase.
+            # }}
+            # usage {{
+            'installs': {}, # The total number of times your app has been installed. Includes redownloads and restores on the same or different device, downloads to multiple devices sharing the same Apple ID, and Family Sharing installations.
+            'sessions': {}, # The number of times the app has been used for at least two seconds.
+            'activeDevices': {}, # The total number of devices with at least one session during the selected period.
+            'rollingActiveDevices': {}, # The total number of devices with at least one session within 30 days of the selected day.
+            'crashes': {}, # The total number of crashes. Actual crash reports are available in Xcode.
+            'uninstalls': {}, # The number of times your app has been deleted on devices running iOS 12.3, tvOS 13.0, or macOS 10.15.1 or later.
+            # }}
 
-        for metric in metrics:
-            response = self.timeSeriesAnalytics(appleId,metric,startTime,endTime,"DAY",None)
-            yield response
+            # Acquisition {{
+            'pageViewUnique': { # pages view by sources
+                "group": {
+                   "metric": "pageViewUnique",
+                   "dimension": "source",
+                   "rank": "DESCENDING",
+                   "limit": 10,
+                },
+            },
+            # }}
+
+            ## TODO {{
+            #'benchConversionRate': {
+            #    'dimensionFilters': [
+            #        {
+            #            "dimensionKey":"peerGroupId",
+            #            "optionKeys": ["14"]
+            #        },
+            #    ],
+            #    'frequency': 'week',
+            #},
+            ## }}
+        }
+
+        defaultSettings = {
+            'appIds': appleId,
+            'startTime': startTime,
+            'endTime': endTime,
+            'frequency': 'day',
+            'group': None,
+        }
+
+        for metric,settings in metrics.items():
+            args = defaultSettings.copy()
+            args.update(settings)
+            args['measures'] = metric
+            response = self.timeSeriesAnalytics(**args)
+            yield { 'settings': args, 'response': response }
