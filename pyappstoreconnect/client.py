@@ -37,6 +37,14 @@ for response in responses:
             if argName != 'self':
                 setattr(self, argName, argValue)
 
+        # create cache dir {{
+        try:
+            os.makedirs(self.cacheDirPath)
+        except OSError:
+            if not os.path.isdir(self.cacheDirPath):
+                raise
+        # }}
+
         self.xWidgetKey = self.getXWidgetKey()
         self.hashcash = self.getHashcash()
         self.headers = {
@@ -64,11 +72,6 @@ for response in responses:
         self.xAppleIdSessionId = None
         self.scnt = None
         # persistent session cookie {{
-        try:
-            os.makedirs(self.cacheDirPath)
-        except OSError:
-            if not os.path.isdir(self.cacheDirPath):
-                raise
         self.sessionCacheFile = self.cacheDirPath +'/sessionCacheFile.txt'
         if os.path.exists(self.sessionCacheFile) and os.path.getsize(self.sessionCacheFile) > 0:
             with open(self.sessionCacheFile, 'rb') as f:
