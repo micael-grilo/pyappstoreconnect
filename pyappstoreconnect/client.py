@@ -248,6 +248,8 @@ for response in responses:
         """
         https://github.com/fastlane/fastlane/blob/master/spaceship/lib/spaceship/tunes/tunes_client.rb#L633
         """
+
+        defName = inspect.stack()[0][3]
         if not isinstance(appIds, list):
             appIds = [appIds]
         if not isinstance(measures, list):
@@ -267,7 +269,11 @@ for response in responses:
             "X-Requested-By": "appstoreconnect.apple.com",
         }
         response = self.session.post("https://appstoreconnect.apple.com/analytics/api/v1/data/time-series", json=payload, headers=headers)
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as e:
+            self.logger.error(f"{defName}: failed get response.json(), error={str(e)}")
+            return None
         return data
 
     def appAnalytics(self, appleId, days=7, startTime=None, endTime=None):
