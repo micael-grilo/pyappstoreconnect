@@ -8,6 +8,8 @@ import json
 import datetime
 import hashlib
 import pickle
+import time
+import re
 
 class Client():
     """
@@ -23,7 +25,7 @@ for response in responses:
 ```
     """
 
-    def __init__(self, cacheDirPath="./cache", requestsRetry=True, logLevel=None):
+    def __init__(self, cacheDirPath="./cache", requestsRetry=True, logLevel=None, userAgent=None):
         self.logger = logging.getLogger(self.__class__.__name__)
         if logLevel:
             if re.match(r"^(warn|warning)$", logLevel, re.IGNORECASE):
@@ -54,6 +56,8 @@ for response in responses:
             "X-Apple-Widget-Key": self.xWidgetKey,
             "X-Apple-HC": self.hashcash,
         }
+        if userAgent:
+            self.headers['User-Agent'] = userAgent
         self.session = requests.Session() # create a new session object
         # requests: define the retry strategy {{
         if self.requestsRetry:
@@ -244,7 +248,7 @@ for response in responses:
         endTime = currentTime.strftime("%Y-%m-%dT00:00:00Z")
         return { "startTime": startTime, "endTime": endTime }
 
-    def timeSeriesAnalytics(self, appIds, measures, startTime, endTime, frequency, group=None, dimensionFilters=list()):
+    def timeSeriesAnalytics(self, appIds, measures, startTime, endTime, frequency, group=None, dimensionFilters=list(), apiVersion='v1'):
         """
         https://github.com/fastlane/fastlane/blob/master/spaceship/lib/spaceship/tunes/tunes_client.rb#L633
         """
@@ -268,7 +272,7 @@ for response in responses:
         headers = {
             "X-Requested-By": "appstoreconnect.apple.com",
         }
-        response = self.session.post("https://appstoreconnect.apple.com/analytics/api/v1/data/time-series", json=payload, headers=headers)
+        response = self.session.post(f"https://appstoreconnect.apple.com/analytics/api/{apiVersion}/data/time-series", json=payload, headers=headers)
         try:
             data = response.json()
         except Exception as e:
@@ -316,38 +320,133 @@ for response in responses:
             'crashes': {}, # The total number of crashes. Actual crash reports are available in Xcode.
             'uninstalls': {}, # The number of times your app has been deleted on devices running iOS 12.3, tvOS 13.0, or macOS 10.15.1 or later.
             # }}
-
-            # Acquisition {{
-            'pageViewUniqueSource': { # pages view by sources
-                'measures': 'pageViewUnique',
-                'group': {
-                   'metric': 'pageViewUnique',
-                   'dimension': 'source',
-                   'rank': 'DESCENDING',
-                   'limit': 10,
-                },
-            },
-            # }}
-
-            ## TODO {{
-            #'benchConversionRate': {
-            #    'dimensionFilters': [
-            #        {
-            #            "dimensionKey":"peerGroupId",
-            #            "optionKeys": ["14"]
-            #        },
-            #    ],
-            #    'frequency': 'week',
-            #},
-            ## }}
         }
-
         defaultSettings = {
             'appIds': appleId,
             'startTime': startTime,
             'endTime': endTime,
             'frequency': 'day',
             'group': None,
+        }
+
+        # grouping by
+        groups = {
+            'source': {}, # source type: web referrer, app referrer, etc...
+            'platform': {}, # device: iphone, ipad, etc...
+            'platformVersion': {}, # ios 17, ios 16, etc...
+            'pageType': {}, # product page, store sheet, etc...
+            'region': {}, # region: europe, usa and canada, asia, etc...
+            'storefront': {}, # territory: united states, germany, etc...
+            'appReferrer': {}, # Google Chrome, Firefix, etc...
+            'domainReferrer': {}, # anytype.io, google.com, etc...
+        }
+        groupsDefaultSettings = {
+            'rank': 'DESCENDING',
+            'limit': 10,
+        }
+
+
+        for metric,settings in metrics.items():
+            args = defaultSettings.copy()
+            args.update(settings)
+            if not 'measures' in args:
+                args['measures'] = metric
+            # metrics grouping by date {{
+            response = self.timeSeriesAnalytics(**args)
+            yield { 'settings': args, 'response': response }
+            time.sleep(3) # we need a wait, because apple have rate limit
+            # }}
+
+            # metrics with grouping {{
+            for group,groupSettings in groups.items():
+                _groupSettings = groupsDefaultSettings.copy()
+                _groupSettings.update(groupSettings)
+                _groupSettings['metric'] = args['measures']
+                _groupSettings['dimension'] = group
+                args['group'] = _groupSettings
+                response = self.timeSeriesAnalytics(**args)
+                yield { 'settings': args, 'response': response }
+                time.sleep(3) # we need a wait, because apple have rate limit
+            # }}
+
+
+    def benchmarks(self, appleId, days=182, startTime=None, endTime=None):
+        """
+        benchmarks
+        default intervals: 4 weeks, 12 weeks, 26 weeks (182 days)
+        """
+
+        # set default time interval
+        if not startTime and not endTime:
+            timeInterval = self.timeInterval(days)
+            startTime = timeInterval['startTime']
+            endTime = timeInterval['endTime']
+
+        metrics = {
+            # conversionRate {{
+            'benchConversionRate': {
+                'dimensionFilters': [
+                    {
+                        'dimensionKey': 'peerGroupId',
+                        'optionKeys': ['14'],
+                    }
+                ],
+            },
+            'conversionRate': {},
+            # }}
+            # crashRate {{
+            'benchCrashRate': {
+                'dimensionFilters': [
+                    {
+                        'dimensionKey': 'peerGroupId',
+                        'optionKeys': ['14'],
+                    }
+                ],
+            },
+            'crashRate': {},
+            # }}
+            # retentionD1 {{
+            'benchRetentionD1': {
+                'dimensionFilters': [
+                    {
+                        'dimensionKey': 'peerGroupId',
+                        'optionKeys': ['14'],
+                    }
+                ],
+            },
+            'retentionD1': {},
+            # }}
+            # retentionD7 {{
+            'benchRetentionD7': {
+                'dimensionFilters': [
+                    {
+                        'dimensionKey': 'peerGroupId',
+                        'optionKeys': ['14'],
+                    }
+                ],
+            },
+            'retentionD7': {},
+            # }}
+            # retentionD28 {{
+            'benchRetentionD28': {
+                'dimensionFilters': [
+                    {
+                        'dimensionKey': 'peerGroupId',
+                        'optionKeys': ['14'],
+                    }
+                ],
+            },
+            'retentionD28': {},
+            # }}
+        }
+
+        defaultSettings = {
+            'appIds': appleId,
+            'startTime': startTime,
+            'endTime': endTime,
+            'frequency': 'week',
+            'group': None,
+            'apiVersion': 'v2',
         }
 
         for metric,settings in metrics.items():
@@ -357,3 +456,4 @@ for response in responses:
                 args['measures'] = metric
             response = self.timeSeriesAnalytics(**args)
             yield { 'settings': args, 'response': response }
+            time.sleep(3) # we need a wait, because apple have rate limit
