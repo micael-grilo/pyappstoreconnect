@@ -359,6 +359,20 @@ for response in responses:
             'rank': 'DESCENDING',
             'limit': 10,
         }
+        invalidMeasureDimensionCombination = {
+            'updates': 'pageType',
+            'payingUsers': 'platform',
+            'sessions': 'platformVersion',
+            'rollingActiveDevices': 'appReferrer',
+            'rollingActiveDevices': 'domainReferrer',
+            'crashes': 'source',
+            'crashes': 'platform',
+            'crashes': 'pageType',
+            'crashes': 'region',
+            'crashes': 'storefront',
+            'crashes': 'appReferrer',
+            'crashes': 'domainReferrer',
+        }
 
 
         for metric,settings in metrics.items():
@@ -374,6 +388,10 @@ for response in responses:
 
             # metrics with grouping {{
             for group,groupSettings in groups.items():
+                if metric in invalidMeasureDimensionCombination.keys() and invalidMeasureDimensionCombination[metric] == group:
+                    self.logger.debug(f"{defName}: skipping invalid measure-dimension combination: metric={metric}, group={group}")
+                    # skip if we have invalid measure-dimension combination
+                    continue
                 _groupSettings = groupsDefaultSettings.copy()
                 _groupSettings.update(groupSettings)
                 _groupSettings['metric'] = args['measures']
