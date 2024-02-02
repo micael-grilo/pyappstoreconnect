@@ -234,6 +234,8 @@ for response in responses:
             pickle.dump(self.session.cookies, f)
 
     def login(self, username, password):
+        defName = inspect.stack()[0][3]
+
         url = "https://idmsa.apple.com/appleauth/auth/signin"
         headers = self.headers
         payload = {
@@ -301,6 +303,7 @@ for response in responses:
         returns iterable object
         """
 
+        defName = inspect.stack()[0][3]
         # set default time interval
         if not startTime and not endTime:
             timeInterval = self.timeInterval(days)
@@ -409,6 +412,7 @@ for response in responses:
         default intervals: 4 weeks, 12 weeks, 26 weeks (182 days)
         """
 
+        defName = inspect.stack()[0][3]
         # set default time interval
         if not startTime and not endTime:
             timeInterval = self.timeInterval(days)
