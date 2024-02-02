@@ -110,7 +110,11 @@ for response in responses:
                  xWidgetKey = file.read()
         else:
             response = requests.get("https://appstoreconnect.apple.com/olympus/v1/app/config", params={ "hostname": "itunesconnect.apple.com" })
-            data = response.json()
+            try:
+                data = response.json()
+            except Exception as e:
+                self.logger.error(f"{defName}: failed get response.json(), error={str(e)}")
+                return None
             with open(cacheFile, "w") as file:
                 file.write(data['authServiceKey'])
             xWidgetKey = data['authServiceKey']
@@ -156,10 +160,13 @@ for response in responses:
 
         r = self.session.get("https://idmsa.apple.com/appleauth/auth", headers=headers)
         self.logger.debug(f"{defName}: response.status_code={r.status_code}")
-        self.logger.debug(f"{defName}: response.json()={json.dumps(r.json())}")
         if r.status_code == 201:
             # success
-            data = r.json()
+            try:
+                data = r.json()
+            except Exception as e:
+                raise Exception(f"{defName}: failed get response.json(), error={str(e)}")
+            self.logger.debug(f"{defName}: response.json()={json.dumps(data)}")
             if 'trustedDevices' in data:
                 self.logger.debug(f"{defName}: trustedDevices={data['trustedDevices']}")
                 self.handleTwoStep(r)
@@ -181,7 +188,10 @@ for response in responses:
 
     def handleTwoFactor(self,response):
         defName = inspect.stack()[0][3]
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as e:
+            raise Exception(f"{defName}: failed get response.json(), error={str(e)}")
         securityCode = data["securityCode"]
         # "securityCode": {
         #     "length": 6,
@@ -233,7 +243,12 @@ for response in responses:
         }
 
         response = self.session.post(url, json=payload, headers=headers)
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as e:
+            self.logger.error(f"{defName}: failed get response.json(), error={str(e)}")
+            return None
+
         if response.status_code == 409:
             # 2fa
             self.logger.debug(f"response.status_code={response.status_code}, go to 2fa auth")
