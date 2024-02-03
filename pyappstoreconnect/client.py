@@ -63,7 +63,7 @@ for response in responses:
         if self.requestsRetry:
             retryStrategy = Retry(
                 total=4, # maximum number of retries
-                backoff_factor=10, # retry via 10, 20, 40, 80 sec
+                backoff_factor=30, # retry via 30, 60, 120, 240 sec
                 status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
             )
             # create an http adapter with the retry strategy and mount it to session
