@@ -8,7 +8,6 @@ import json
 import datetime
 import hashlib
 import pickle
-import time
 import re
 
 class Client():
@@ -419,7 +418,6 @@ for response in responses:
             # metrics grouping by date {{
             response = self.timeSeriesAnalytics(**settings)
             yield { 'settings': settings, 'response': response }
-            #time.sleep(3) # we need a wait, because apple have rate limit
             # }}
 
             # metrics with grouping {{
@@ -444,7 +442,6 @@ for response in responses:
                     settings['group'] = _groupSettings
                     response = self.timeSeriesAnalytics(**settings)
                     yield { 'settings': settings, 'response': response }
-                    #time.sleep(3) # we need a wait, because apple have rate limit
 
             else:
                 # else, get all groups for all metrics
@@ -460,7 +457,6 @@ for response in responses:
                     settings['group'] = _groupSettings
                     response = self.timeSeriesAnalytics(**settings)
                     yield { 'settings': settings, 'response': response }
-                    #time.sleep(3) # we need a wait, because apple have rate limit
             # }}
 
 
@@ -551,4 +547,3 @@ for response in responses:
                 args['measures'] = metric
             response = self.timeSeriesAnalytics(**args)
             yield { 'settings': args, 'response': response }
-            time.sleep(3) # we need a wait, because apple have rate limit
