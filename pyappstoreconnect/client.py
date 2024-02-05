@@ -30,8 +30,9 @@ for response in responses:
         requestsRetry=True,
         requestsRetrySettings={
             "total": 4, # maximum number of retries
-            "backoff_factor": 60, # {backoff factor} * (2 ** ({number of previous retries}))
+            "backoff_factor": 30, # {backoff factor} * (2 ** ({number of previous retries}))
             "status_forcelist": [429, 500, 502, 503, 504], # HTTP status codes to retry on
+            "allowed_methods": ['HEAD', 'TRACE', 'GET', 'PUT', 'OPTIONS', 'POST'],
         },
         logLevel=None,
         userAgent=None,
@@ -71,10 +72,9 @@ for response in responses:
         self.session = requests.Session() # create a new session object
         # requests: define the retry strategy {{
         if self.requestsRetry:
-            retryStrategy = Retry(**requestsRetrySettings)
+            retryStrategy = Retry(**self.requestsRetrySettings)
             # create an http adapter with the retry strategy and mount it to session
             adapter = HTTPAdapter(max_retries=retryStrategy)
-            self.session.mount('http://', adapter)
             self.session.mount('https://', adapter)
         # }}
         self.session.headers.update(self.headers)
