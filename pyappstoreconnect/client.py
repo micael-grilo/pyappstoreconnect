@@ -25,7 +25,17 @@ for response in responses:
 ```
     """
 
-    def __init__(self, cacheDirPath="./cache", requestsRetry=True, logLevel=None, userAgent=None):
+    def __init__(self,
+        cacheDirPath="./cache",
+        requestsRetry=True,
+        requestsRetrySettings={
+            "total": 4, # maximum number of retries
+            "backoff_factor": 60, # {backoff factor} * (2 ** ({number of previous retries}))
+            "status_forcelist": [429, 500, 502, 503, 504], # HTTP status codes to retry on
+        },
+        logLevel=None,
+        userAgent=None,
+    ):
         self.logger = logging.getLogger(self.__class__.__name__)
         if logLevel:
             if re.match(r"^(warn|warning)$", logLevel, re.IGNORECASE):
@@ -61,11 +71,7 @@ for response in responses:
         self.session = requests.Session() # create a new session object
         # requests: define the retry strategy {{
         if self.requestsRetry:
-            retryStrategy = Retry(
-                total=4, # maximum number of retries
-                backoff_factor=30, # retry via 30, 60, 120, 240 sec
-                status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-            )
+            retryStrategy = Retry(**requestsRetrySettings)
             # create an http adapter with the retry strategy and mount it to session
             adapter = HTTPAdapter(max_retries=retryStrategy)
             self.session.mount('http://', adapter)
