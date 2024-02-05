@@ -295,7 +295,9 @@ for response in responses:
         headers = {
             "X-Requested-By": "appstoreconnect.apple.com",
         }
-        response = self.session.post(f"https://appstoreconnect.apple.com/analytics/api/{apiVersion}/data/time-series", json=payload, headers=headers)
+        url=f"https://appstoreconnect.apple.com/analytics/api/{apiVersion}/data/time-series"
+        self.logger.debug(f"payload={json.dumps(payload)}")
+        response = self.session.post(url, json=payload, headers=headers)
 
         # check status_code
         if response.status_code != 200:
@@ -316,10 +318,19 @@ for response in responses:
 
         return data
 
-    def appAnalytics(self, appleId, days=7, startTime=None, endTime=None):
+    def appAnalytics(self, appleId, days=7, startTime=None, endTime=None, groupsByMap=dict()):
         """
         https://github.com/fastlane/fastlane/blob/master/spaceship/lib/spaceship/tunes/app_analytics.rb
         returns iterable object
+        groupsByMap - map for limits grouping, if not set, will be get grouping for all metrics (more 150 results)
+            format:
+                { "metric": "group" }
+
+            example:
+                groupsByMap={
+                    "pageViewUnique": "source",
+                    "updates": "storefront",
+                }
         """
 
         defName = inspect.stack()[0][3]
@@ -412,18 +423,44 @@ for response in responses:
             # }}
 
             # metrics with grouping {{
-            for group in groups:
-                if metric in invalidMeasureDimensionCombination.keys() and group in invalidMeasureDimensionCombination[metric]:
-                    self.logger.debug(f"{defName}: skipping invalid measure-dimension combination: metric={metric}, group={group}")
-                    # skip if we have invalid measure-dimension combination
-                    continue
-                _groupSettings = groupsDefaultSettings.copy()
-                _groupSettings['metric'] = settings['measures']
-                _groupSettings['dimension'] = group
-                settings['group'] = _groupSettings
-                response = self.timeSeriesAnalytics(**settings)
-                yield { 'settings': settings, 'response': response }
-                #time.sleep(3) # we need a wait, because apple have rate limit
+            if groupsByMap:
+                # if set, get groups by static maps
+                for _metric,_group in groupsByMap.items():
+                    if _metric != metric:
+                        continue
+                    if _metric not in metrics:
+                        self.logger.warning(f"{defName}: invalid pair='{_metric}':'{_group}' in groupsByMap, metric not in available metrics list")
+                        continue
+                    if _group not in groups:
+                        self.logger.warning(f"{defName}: invalid pair='{_metric}':'{_group}' in groupsByMap, group not in available groups list")
+                        continue
+                    if _metric in invalidMeasureDimensionCombination.keys() and _group in invalidMeasureDimensionCombination[_metric]:
+                        self.logger.warning(f"{defName}: invalid pair='{_metric}':'{_group}' in groupsByMap, invalid measure-dimension combination")
+                        # skip if we have invalid measure-dimension combination
+                        continue
+                    _groupSettings = groupsDefaultSettings.copy()
+                    _groupSettings['metric'] = settings['measures']
+                    _groupSettings['dimension'] = _group
+                    settings['group'] = _groupSettings
+                    response = self.timeSeriesAnalytics(**settings)
+                    yield { 'settings': settings, 'response': response }
+                    #time.sleep(3) # we need a wait, because apple have rate limit
+
+            else:
+                # else, get all groups for all metrics
+                # WARNING: most likely you will get rate limit
+                for group in groups:
+                    if metric in invalidMeasureDimensionCombination.keys() and group in invalidMeasureDimensionCombination[metric]:
+                        self.logger.debug(f"{defName}: skipping invalid measure-dimension combination: metric={metric}, group={group}")
+                        # skip if we have invalid measure-dimension combination
+                        continue
+                    _groupSettings = groupsDefaultSettings.copy()
+                    _groupSettings['metric'] = settings['measures']
+                    _groupSettings['dimension'] = group
+                    settings['group'] = _groupSettings
+                    response = self.timeSeriesAnalytics(**settings)
+                    yield { 'settings': settings, 'response': response }
+                    #time.sleep(3) # we need a wait, because apple have rate limit
             # }}
 
 
