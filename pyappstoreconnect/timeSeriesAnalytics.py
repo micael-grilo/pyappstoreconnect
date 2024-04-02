@@ -27,12 +27,12 @@ class TimeSeriesAnalytics:
             "X-Requested-By": "appstoreconnect.apple.com",
         }
         url=f"https://appstoreconnect.apple.com/analytics/api/{apiVersion}/data/time-series"
-        self.logger.debug(f"payload={json.dumps(payload)}")
+        self.logger.debug(f"{defName}: payload={json.dumps(payload)}")
         response = self.session.post(url, json=payload, headers=headers)
 
         # check status_code
         if response.status_code != 200:
-            self.logger.error(f"{defName}: status_code = {response.status_code}, payload={payload}, response.text={response.text}")
+            self.logger.error(f"{defName}: status_code={response.status_code}, payload={payload}, response.text={response.text}")
             return False
 
         # check json data
@@ -44,7 +44,7 @@ class TimeSeriesAnalytics:
 
         # check results
         if 'results' not in data:
-            self.logger.error(f"{defName}: 'results' not found in response.json() = {data}")
+            self.logger.error(f"{defName}: 'results' not found in response.json()={data}")
             return False
 
         return data
