@@ -276,8 +276,12 @@ for response in responses:
             # 2fa
             self.logger.debug(f"{defName}: response.status_code={response.status_code}, go to 2fa auth")
             self.handleTwoStepOrFactor(response)
+        elif response.status_code == 401:
+            message = f"url={url}, response.status_code={response.status_code}, incorrect login or password"
+            self.logger.error(f"{defName}: {message}")
+            raise Exception(message)
         elif response.status_code != 200:
-            message = f"url={url}, bad response.status_code={response.status_code}, should be 200 or 409"
+            message = f"url={url}, wrong response.status_code={response.status_code}, should be 200 or 409"
             self.logger.error(f"{defName}: {message}")
             raise Exception(message)
 
