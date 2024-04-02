@@ -19,7 +19,7 @@ class Settings:
         try:
             data = response.json()
         except Exception as e:
-            self.logger.error(f"{defName}: failed get response.json(), error={str(e)}")
+            self.logger.error(f"{defName}: failed get response.json(), error={str(e)}, response.text={response.text}")
             return None
 
         return data
