@@ -49,7 +49,7 @@ for response in responses:
         logLevel=None,
         userAgent=None,
     ):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(__name__)
         if logLevel:
             if re.match(r"^(warn|warning)$", logLevel, re.IGNORECASE):
                 self.logger.setLevel(logging.WARNING)
@@ -265,6 +265,7 @@ for response in responses:
         }
 
         response = self.session.post(url, json=payload, headers=headers)
+        self.logger.debug(f"{defName}: url={url}, response.status_code={response.status_code}")
         try:
             data = response.json()
         except Exception as e:
@@ -273,8 +274,12 @@ for response in responses:
 
         if response.status_code == 409:
             # 2fa
-            self.logger.debug(f"response.status_code={response.status_code}, go to 2fa auth")
+            self.logger.debug(f"{defName}: response.status_code={response.status_code}, go to 2fa auth")
             self.handleTwoStepOrFactor(response)
+        elif response.status_code != 200:
+            message = f"url={url}, bad response.status_code={response.status_code}, should be 200 or 409"
+            self.logger.error(f"{defName}: {message}")
+            raise Exception(message)
 
         # get api settings
         self.apiSettingsAll = self.getSettingsAll()
