@@ -113,7 +113,7 @@ for response in responses:
             'X-Apple-Id-Session-Id': self.xAppleIdSessionId,
             'scnt': self.scnt,
         }
-        self.logger.debug(f"{defName}: headers={headers}")
+        self.logger.debug(f"def={defName}: headers={headers}")
 
         return headers
 
@@ -133,13 +133,13 @@ for response in responses:
             try:
                 data = response.json()
             except Exception as e:
-                self.logger.error(f"{defName}: failed get response.json(), error={str(e)}")
+                self.logger.error(f"def={defName}: failed get response.json(), error={str(e)}")
                 return None
             with open(cacheFile, "w") as file:
                 file.write(data['authServiceKey'])
             xWidgetKey = data['authServiceKey']
 
-        self.logger.debug(f"{defName}: xWidgetKey={xWidgetKey}")
+        self.logger.debug(f"def={defName}: xWidgetKey={xWidgetKey}")
         return xWidgetKey
 
     def getHashcash(self):
@@ -164,7 +164,7 @@ for response in responses:
             sha1_hash = hashlib.sha1(hc.encode()).digest()
             binary_hash = bin(int.from_bytes(sha1_hash, byteorder='big'))[2:] # сonvert to binary format
             if binary_hash.zfill(160)[:bits] == '0' * bits: # checking leading bits
-                self.logger.debug(f"{defName}: hc={hc}")
+                self.logger.debug(f"def={defName}: hc={hc}")
                 return hc
             counter += 1
         # }}
@@ -179,26 +179,26 @@ for response in responses:
         headers = self.appleSessionHeaders()
 
         r = self.session.get("https://idmsa.apple.com/appleauth/auth", headers=headers)
-        self.logger.debug(f"{defName}: response.status_code={r.status_code}")
+        self.logger.debug(f"def={defName}: response.status_code={r.status_code}")
         if r.status_code == 201:
             # success
             try:
                 data = r.json()
             except Exception as e:
-                raise Exception(f"{defName}: failed get response.json(), error={str(e)}")
-            self.logger.debug(f"{defName}: response.json()={json.dumps(data)}")
+                raise Exception(f"def={defName}: failed get response.json(), error={str(e)}")
+            self.logger.debug(f"def={defName}: response.json()={json.dumps(data)}")
             if 'trustedDevices' in data:
-                self.logger.debug(f"{defName}: trustedDevices={data['trustedDevices']}")
+                self.logger.debug(f"def={defName}: trustedDevices={data['trustedDevices']}")
                 self.handleTwoStep(r)
             elif 'trustedPhoneNumbers' in data:
                 # read code from phone
-                self.logger.debug(f"{defName}: trustedPhoneNumbers={data['trustedPhoneNumbers']}")
+                self.logger.debug(f"def={defName}: trustedPhoneNumbers={data['trustedPhoneNumbers']}")
                 self.handleTwoFactor(r)
             else:
                 raise Exception(f"Although response from Apple indicated activated Two-step Verification or Two-factor Authentication, we didn't know how to handle this response: #{r.text}")
 
         else:
-            raise Exception(f"{defName}: bad response.status_code={r.status_code}")
+            raise Exception(f"def={defName}: bad response.status_code={r.status_code}")
 
         return
 
@@ -211,7 +211,7 @@ for response in responses:
         try:
             data = response.json()
         except Exception as e:
-            raise Exception(f"{defName}: failed get response.json(), error={str(e)}")
+            raise Exception(f"def={defName}: failed get response.json(), error={str(e)}")
         securityCode = data["securityCode"]
         # "securityCode": {
         #     "length": 6,
@@ -238,8 +238,8 @@ for response in responses:
         }
         headers = self.appleSessionHeaders()
         r = self.session.post(f"https://idmsa.apple.com/appleauth/auth/verify/{codeType}/securitycode", json=payload, headers=headers)
-        self.logger.debug(f"{defName}: response.status_code={r.status_code}")
-        self.logger.debug(f"{defName}: response.json()={json.dumps(r.json())}")
+        self.logger.debug(f"def={defName}: response.status_code={r.status_code}")
+        self.logger.debug(f"def={defName}: response.json()={json.dumps(r.json())}")
 
         if r.status_code == 200:
             self.storeSession()
@@ -265,24 +265,24 @@ for response in responses:
         }
 
         response = self.session.post(url, json=payload, headers=headers)
-        self.logger.debug(f"{defName}: url={url}, response.status_code={response.status_code}")
+        self.logger.debug(f"def={defName}: url={url}, response.status_code={response.status_code}")
         try:
             data = response.json()
         except Exception as e:
-            self.logger.error(f"{defName}: failed get response.json(), error={str(e)}")
+            self.logger.error(f"def={defName}: failed get response.json(), error={str(e)}, url='{url}', response.status_code='{str(response.status_code)}', response.text='{str(response.text)}'")
             return None
 
         if response.status_code == 409:
             # 2fa
-            self.logger.debug(f"{defName}: response.status_code={response.status_code}, go to 2fa auth")
+            self.logger.debug(f"def={defName}: response.status_code={response.status_code}, go to 2fa auth")
             self.handleTwoStepOrFactor(response)
         elif response.status_code == 401:
             message = f"url={url}, response.status_code={response.status_code}, incorrect login or password"
-            self.logger.error(f"{defName}: {message}")
+            self.logger.error(f"def={defName}: {message}")
             raise Exception(message)
         elif response.status_code != 200:
             message = f"url={url}, wrong response.status_code={response.status_code}, should be 200 or 409"
-            self.logger.error(f"{defName}: {message}")
+            self.logger.error(f"def={defName}: {message}")
             raise Exception(message)
 
         # get api settings
