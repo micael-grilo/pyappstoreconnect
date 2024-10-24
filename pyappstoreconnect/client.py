@@ -9,6 +9,10 @@ import datetime
 import hashlib
 import pickle
 import re
+import sirp
+import base64
+import binascii
+
 from .settings import Settings # mixin
 from .timeSeriesAnalytics import TimeSeriesAnalytics # mixin
 from .appAnalytics import AppAnalytics # minix
@@ -48,6 +52,7 @@ for response in responses:
         },
         logLevel=None,
         userAgent=None,
+        legacySignin=False,
     ):
         self.logger = logging.getLogger(__name__)
         if logLevel:
@@ -254,6 +259,109 @@ for response in responses:
             pickle.dump(self.session.cookies, f)
 
     def login(self, username, password):
+        defName = inspect.stack()[0][3]
+        self.logger.debug(f"def={defName}: starting")
+        if self.legacySignin:
+            return self._legacySignin(username,password)
+        else:
+            return self._sirp(username,password)
+
+    def _sirp(self,username,password):
+        defName = inspect.stack()[0][3]
+
+        client = sirp.Client(2048)
+        a = client.start_authentication()
+
+        # init request {{
+        url = "https://idmsa.apple.com/appleauth/auth/signin/init"
+        payload = {
+            "a": base64.b64encode(self.to_byte(a)).decode('utf-8'),
+            "accountName": username,
+            "protocols": ['s2k', 's2k_fo']
+        }
+        response = self.session.post(url, json=payload, headers=self.headers)
+        self.logger.debug(f"def={defName}: url={url}, response.status_code={response.status_code}")
+        try:
+            data = response.json()
+        except Exception as e:
+            self.logger.error(f"def={defName}: failed get response.json(), error={str(e)}, url='{url}', response.status_code='{str(response.status_code)}', response.text='{str(response.text)}'")
+            return None
+        self.logger.debug(f"def={defName}: Received SIRP signin init response, url='{url}', response.status_code={response.status_code}, data='{data}'")
+
+        if response.status_code != 200:
+            message = f"url={url}, wrong response.status_code={response.status_code}, should be 200"
+            self.logger.error(f"def={defName}: {message}")
+            raise Exception(message)
+        # }}
+
+        iteration = data['iteration']
+        salt = base64.b64decode(data['salt'])
+        b = base64.b64decode(data['b'])
+        c = data['c']
+        self.logger.debug(f"def={defName}: salt='{salt}', b='{b}', c='{c}'")
+
+        key_length = 32
+        encrypted_password = self.pbkdf2(password,salt,iteration,key_length)
+        self.logger.debug(f"def={defName}: key_length='{key_length}', encrypted_password='{encrypted_password}'")
+
+        m1 = client.process_challenge(
+            username,
+            self.to_hex(encrypted_password),
+            self.to_hex(salt),
+            self.to_hex(b),
+            is_password_encrypted=True,
+        )
+        m2 = client.H_AMK
+
+        if m1 == False:
+            raise Exception('Error processing SIRP challenge')
+
+        # complete request {{
+        url = "https://idmsa.apple.com/appleauth/auth/signin/complete"
+        payload = {
+            'accountName': username,
+            'c': c,
+            'm1': base64.b64encode(self.to_byte(m1)).strip().decode('utf-8'),
+            'm2': base64.b64encode(self.to_byte(m2)).strip().decode('utf-8'),
+            'rememberMe': False,
+        }
+        response = self.session.post(url, json=payload, headers=self.headers, params = { 'isRememberMeEnabled': False })
+        self.logger.debug(f"def={defName}: url={url}, response.status_code={response.status_code}")
+        try:
+            data = response.json()
+        except Exception as e:
+            self.logger.error(f"def={defName}: failed get response.json(), error={str(e)}, url='{url}', response.status_code='{str(response.status_code)}', response.text='{str(response.text)}'")
+            return None
+        self.logger.debug(f"def={defName}: Completed SIRP authentication, url='{url}', response.status_code={response.status_code}, data='{data}'")
+
+        if response.status_code == 409:
+            # 2fa
+            self.logger.debug(f"def={defName}: response.status_code={response.status_code}, go to 2fa auth")
+            self.handleTwoStepOrFactor(response)
+        elif response.status_code == 401:
+            message = f"url={url}, response.status_code={response.status_code}, incorrect login or password"
+            self.logger.error(f"def={defName}: {message}")
+            raise Exception(message)
+        elif response.status_code != 200:
+            message = f"url={url}, wrong response.status_code={response.status_code}, should be 200 or 409"
+            self.logger.error(f"def={defName}: {message}")
+            raise Exception(message)
+        # }}
+
+        return response
+
+    @staticmethod
+    def pbkdf2(password, salt, iteration, key_length, digest=hashlib.sha256):
+        password = hashlib.sha256(password.encode()).digest()
+        return hashlib.pbkdf2_hmac(digest().name, password, salt, iteration, key_length)
+    @staticmethod
+    def to_hex(s):
+        return binascii.hexlify(s).decode()
+    @staticmethod
+    def to_byte(s):
+        return binascii.unhexlify(s)
+
+    def _legacySignin(self,username,password):
         defName = inspect.stack()[0][3]
 
         url = "https://idmsa.apple.com/appleauth/auth/signin"
