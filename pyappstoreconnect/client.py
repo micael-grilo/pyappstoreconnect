@@ -348,6 +348,9 @@ for response in responses:
             raise Exception(message)
         # }}
 
+        # get api settings
+        self.apiSettingsAll = self.getSettingsAll()
+
         return response
 
     @staticmethod

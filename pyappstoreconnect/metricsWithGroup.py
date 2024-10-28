@@ -22,6 +22,7 @@ class MetricsWithGroup:
         # get available options for groups
         for metric in metrics:
             # get available dimensions id for metrics {{
+            self.logger.debug(f"{defName}: metric={metric}")
             for measure in self.apiSettingsAll['measures']:
                 if measure['key'] == metric or measure['title'] == metric:
                     availableDimensionsIds = measure['dimensions']
