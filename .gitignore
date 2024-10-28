@@ -6,3 +6,4 @@ test-results.xml
 .coverage
 dist/
 pyappstoreconnect.egg-info/
+test.yml
