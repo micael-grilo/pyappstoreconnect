@@ -8,5 +8,5 @@ based on https://github.com/fastlane/fastlane/tree/master/spaceship
 session saved in cache file and valid one month
 
 ## example
-You can find an example of usage and a basic test [here](test.py)
+You can find an example of usage and a basic test [here](https://github.com/fb929/pyappstoreconnect/blob/main/test.py)
 
