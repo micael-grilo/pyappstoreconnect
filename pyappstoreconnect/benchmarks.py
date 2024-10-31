@@ -2,20 +2,35 @@ import inspect
 
 class BenchmarksMixin:
     """
-    available optionKeys
-        14  - "Productivity App" This peer set includes apps in the Productivity category on the App Store.
-        2   - "All Categories" This peer set includes apps in all categories on the App Store.
+    available category:
+        ProductivityApp - "Productivity App" This peer set includes apps in the Productivity category on the App Store.
+        AllCategories   - "All Categories" This peer set includes apps in all categories on the App Store.
     """
 
-    def benchmarks(self, appleId, days=182, startTime=None, endTime=None, optionKeys=14):
+    def benchmarks(self, appleId, days=182, startTime=None, endTime=None, category="AllCategories", optionKeys=None):
         """
         benchmarks
         default intervals: 4 weeks, 12 weeks, 26 weeks (182 days)
         """
 
         defName = inspect.stack()[0][3]
-        if not isinstance(optionKeys, list):
-            optionKeys = [optionKeys]
+
+        # depricated options
+        if optionKeys:
+            message = f"deprecated argument 'optionKeys'"
+            self.logger.error(f"{defName}: {message}")
+            raise message
+
+        # convert category to optionKeys
+        if category == 'AllCategories':
+            optionKeys = ["6", "3", "2"]
+        elif category == 'ProductivityApp':
+            optionKeys = ["184", "56", "14"]
+        else:
+            message = f"unsupported category='{category}'"
+            self.logger.error(f"{defName}: {message}")
+            raise message
+
         # set default time interval
         if not startTime and not endTime:
             timeInterval = self.timeInterval(days)
@@ -94,5 +109,6 @@ class BenchmarksMixin:
             args.update(settings)
             if not 'measures' in args:
                 args['measures'] = metric
+            self.logger.debug(f"{defName}: args='{args}'")
             response = self.timeSeriesAnalytics(**args)
             yield { 'settings': args, 'response': response }
