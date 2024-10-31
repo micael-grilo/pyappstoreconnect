@@ -7,10 +7,11 @@ import pyappstoreconnect
 import yaml
 from deepmerge import always_merger
 
+# init logger
 logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
 logger = logging.getLogger(__name__)
-logger.info("starting script")
 
+# init appstore connect client
 client = pyappstoreconnect.Client(
     requestsRetry=False,
     userAgent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -27,24 +28,19 @@ if os.path.isfile(configFile):
         except Exception as e:
             logger.warning(f"skipping load load config file='{configFile}', error='{str(e)}'")
 
+def login():
+    # get username and password
+    username = cfg.get('username') or input("Please enter username: ")
+    password = cfg.get('password') or input(f"Please enter password for username={username}: ")
+    # login
+    response = client.login(username=username, password=password)
+    # check login:
+    if response:
+        logger.info(f"login success")
+    else:
+        logger.error(f"login failed")
+        exit(1)
 
-# get username and password
-username = cfg.get('username') or input("Please enter username: ")
-password = cfg.get('password') or input(f"Please enter password for username={username}: ")
-
-# login
-login = client.login(username=username, password=password)
-# check login:
-if login:
-    logger.info(f"login success")
-else:
-    logger.error(f"login failed")
-    exit(1)
-
-# variables
-appleId = cfg.get('appleId') or input("Please enter appleId: ")
-dateFrom = cfg.get('dateFrom') or input("Please enter dateFrom, example 2024-10-11T00:00:00Z: ")
-dateTo = cfg.get('dateTo') or input("Please enter dateTo, example 2024-10-18T00:00:00Z: ")
 
 ## tests functions
 
@@ -96,6 +92,14 @@ def getAnalyticsByGroups():
 
 ## run tests:
 if __name__ == "__main__":
+    logger.info("starting script")
+    login() # login to apple
+
+    # get variables for tests
+    appleId = cfg.get('appleId') or input("Please enter appleId: ")
+    dateFrom = cfg.get('dateFrom') or input("Please enter dateFrom, example 2024-10-11T00:00:00Z: ")
+    dateTo = cfg.get('dateTo') or input("Please enter dateTo, example 2024-10-18T00:00:00Z: ")
+
     getAppAnalytics()
     getBenchmarks()
     getAnalyticsByGroups()
