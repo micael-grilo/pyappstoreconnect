@@ -6,6 +6,7 @@ import logging
 import pyappstoreconnect
 import yaml
 from deepmerge import always_merger
+import json
 
 # init logger
 logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
@@ -52,17 +53,17 @@ def getAppAnalytics():
         if not analyticsResponses:
             logger.error(f"bad analyticsResponse={analyticsResponse}")
             exit(1)
-        logger.info(f"analyticsResponse='{analyticsResponse}'")
+        logger.info(f"analyticsResponse='{json.dumps(analyticsResponse,indent=4)}'")
 
 # get benchmarks stat
 def getBenchmarks():
     logging.info(f"get benchmarks")
-    benchmarks = client.benchmarks(appleId, optionKeys=14)
+    benchmarks = client.benchmarks(appleId, category='ProductivityApp')
     for benchmark in benchmarks:
-        logger.info(f"optionKeys=14, benchmark='{benchmark}'")
-    benchmarks = client.benchmarks(appleId, optionKeys=2)
+        logger.info(f"category=ProductivityApp, benchmark='{json.dumps(benchmark,indent=4)}'")
+    benchmarks = client.benchmarks(appleId, category='AllCategories')
     for benchmark in benchmarks:
-        logger.info(f"optionKeys=2, benchmark='{benchmark}'")
+        logger.info(f"categor='AllCategories', benchmark='{json.dumps(benchmark,indent=4)}'")
 
 # get analytics (filter replacement)
 def getAnalyticsByGroups():
@@ -88,7 +89,7 @@ def getAnalyticsByGroups():
         if not analyticsResponses:
             logger.error(f"bad analyticsResponse={analyticsResponse}")
             exit(1)
-        logger.info(f"analyticsResponse='{analyticsResponse}'")
+        logger.info(f"analyticsResponse='{json.dumps(analyticsResponse,indent=4)}'")
 
 ## run tests:
 if __name__ == "__main__":
