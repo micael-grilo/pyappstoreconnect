@@ -13,20 +13,20 @@ import sirp
 import base64
 import binascii
 
-from .settings import Settings # mixin
-from .timeSeriesAnalytics import TimeSeriesAnalytics # mixin
-from .appAnalytics import AppAnalytics # minix
-from .benchmarks import Benchmarks # minix
-from .metricsWithFilter import MetricsWithFilter # mixin
-from .metricsWithGroup import MetricsWithGroup # mixin
+from .settings import SettingsMixin
+from .timeSeriesAnalytics import TimeSeriesAnalyticsMixin
+from .appAnalytics import AppAnalyticsMixin
+from .benchmarks import BenchmarksMixin
+from .metricsWithFilter import MetricsWithFilterMixin
+from .metricsWithGroup import MetricsWithGroupMixin
 
 class Client(
-        Settings,
-        TimeSeriesAnalytics,
-        AppAnalytics,
-        Benchmarks,
-        MetricsWithFilter,
-        MetricsWithGroup,
+        SettingsMixin,
+        TimeSeriesAnalyticsMixin,
+        AppAnalyticsMixin,
+        BenchmarksMixin,
+        MetricsWithFilterMixin,
+        MetricsWithGroupMixin,
     ):
     """
     client for connect to appstoreconnect.apple.com

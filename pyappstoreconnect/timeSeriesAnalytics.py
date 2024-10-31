@@ -1,7 +1,7 @@
 import inspect
 import json
 
-class TimeSeriesAnalytics:
+class TimeSeriesAnalyticsMixin:
     def timeSeriesAnalytics(self, adamId, measures, startTime, endTime, frequency, group=None, dimensionFilters=list(), apiVersion='v1'):
         """
         https://github.com/fastlane/fastlane/blob/master/spaceship/lib/spaceship/tunes/tunes_client.rb#L633

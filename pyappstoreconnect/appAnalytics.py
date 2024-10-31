@@ -1,6 +1,6 @@
 import inspect
 
-class AppAnalytics:
+class AppAnalyticsMixin:
     def appAnalytics(self, appleId, days=7, startTime=None, endTime=None, groupsByMap=dict()):
         """
         https://github.com/fastlane/fastlane/blob/master/spaceship/lib/spaceship/tunes/app_analytics.rb

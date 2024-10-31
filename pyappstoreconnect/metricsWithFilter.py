@@ -1,7 +1,7 @@
 import inspect
 import json
 
-class MetricsWithFilter:
+class MetricsWithFilterMixin:
     def getMetricsWithFilter(self, appleId, metrics=list(), filters=list(), days=7, startTime=None, endTime=None):
         """
         get metrics by filter

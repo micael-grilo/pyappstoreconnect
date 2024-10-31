@@ -1,6 +1,6 @@
 import inspect
 
-class Settings:
+class SettingsMixin:
     def getSettingsAll(self):
         """
         get all settings for page

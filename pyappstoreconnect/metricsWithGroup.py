@@ -1,6 +1,6 @@
 import inspect
 
-class MetricsWithGroup:
+class MetricsWithGroupMixin:
     def metricsWithGroups(self, appleId, metrics=list(), groups=list(), days=7, startTime=None, endTime=None, frequency='week'):
         """
         get metrics with grouping

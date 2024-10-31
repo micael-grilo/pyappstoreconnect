@@ -1,6 +1,6 @@
 import inspect
 
-class Benchmarks:
+class BenchmarksMixin:
     """
     available optionKeys
         14  - "Productivity App" This peer set includes apps in the Productivity category on the App Store.
