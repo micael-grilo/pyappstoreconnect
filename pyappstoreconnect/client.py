@@ -19,6 +19,7 @@ from .appAnalytics import AppAnalyticsMixin
 from .benchmarks import BenchmarksMixin
 from .metricsWithFilter import MetricsWithFilterMixin
 from .metricsWithGroup import MetricsWithGroupMixin
+from .acquisition import AcquisitionMixin
 
 class Client(
         SettingsMixin,
@@ -27,6 +28,7 @@ class Client(
         BenchmarksMixin,
         MetricsWithFilterMixin,
         MetricsWithGroupMixin,
+        AcquisitionMixin,
     ):
     """
     client for connect to appstoreconnect.apple.com

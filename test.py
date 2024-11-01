@@ -91,6 +91,15 @@ def getAnalyticsByGroups():
             exit(1)
         logger.info(f"analyticsResponse='{json.dumps(analyticsResponse,indent=4)}'")
 
+def getAcquisition():
+    logger.info(f"get acquisition")
+    analyticsResponses = client.acquisition(
+        appleId,
+        startTime = dateFrom,
+        endTime = dateTo,
+    )
+    logger.info(f"getAcquisition: analyticsResponse='{json.dumps(analyticsResponses,indent=4)}")
+
 ## run tests:
 if __name__ == "__main__":
     logger.info("starting script")
@@ -104,3 +113,4 @@ if __name__ == "__main__":
     getAppAnalytics()
     getBenchmarks()
     getAnalyticsByGroups()
+    getAcquisition()
